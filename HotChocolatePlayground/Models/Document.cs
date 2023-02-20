@@ -4,5 +4,5 @@ public class Document : Entity
 {
     public string Name { get; set; }
 
-    public int MaterialId { get; set; }
+    public Guid MaterialId { get; set; }
 }

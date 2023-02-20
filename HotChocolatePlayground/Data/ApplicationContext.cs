@@ -1,7 +1,6 @@
 ﻿using HotChocolatePlayground.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.Extensions.Logging.Console;
 
 namespace HotChocolatePlayground.Data;
 
@@ -12,50 +11,52 @@ public class ApplicationContext : DbContext
     {
     }
 
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
-        optionsBuilder.ConfigureWarnings(x => x.Log(
-            (RelationalEventId.ConnectionOpened, LogLevel.Warning),
-            (RelationalEventId.ConnectionClosed, LogLevel.Warning)));
-    }
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<Document>()
-            .HasData(Enumerable.Range(0, 900).Select(x => new Document { Id = x + 1, Name = $"Document {x + 1}", MaterialId = x / 3 + 1 }));
-
-        modelBuilder.Entity<Material>()
-            .HasData(Enumerable.Range(0, 300).Select(x => new Material { Id = x + 1, Name = $"Material {x + 1}", FolderId = x / 3 + 1 }));
-
+        var rootFolder = new Folder { Id = Guid.NewGuid() };
         modelBuilder.Entity<Folder>()
-            .HasData(Enumerable.Range(1, 100).Select(x => new Folder { Id = x, ParentFolderId = 101 }).Concat(new[] { new Folder { Id = 101 }}));
+            .HasData(rootFolder);
+
+        var folders = Enumerable.Range(1, 100)
+            .Select(_ => new Folder { Id = Guid.NewGuid(), ParentFolderId = rootFolder.Id })
+            .ToArray();
+        modelBuilder.Entity<Folder>()
+            .HasData(folders);
+
+        var materials = Enumerable.Range(0, 300)
+            .Select(x => new Material { Id = Guid.NewGuid(), Name = $"Material {x + 1}", FolderId = folders[x / 3].Id })
+            .ToArray();
+        modelBuilder.Entity<Material>().HasData(materials);
+
+        var documents = Enumerable.Range(0, 900)
+            .Select(x => new Document { Id = Guid.NewGuid(), Name = $"Document {x + 1}", MaterialId = materials[x / 3].Id })
+            .ToArray();
+        modelBuilder.Entity<Document>()
+            .HasData(documents);
 
         modelBuilder.Entity<User>()
             .HasData(_users);
 
         modelBuilder.Entity<IsFavoriteEntity>()
-            .HasKey(x => new { x.UserId, x.EntityId, x.EntityType });
+            .HasKey(x => new { x.UserId, x.EntityId });
 
         modelBuilder.Entity<IsFavoriteEntity>()
-            .HasData(CreateIsFavoriteEntityRecords());
+            .HasData(CreateIsFavoriteEntityRecords(folders.Select(x => x.Id).ToArray(), documents.Select(x => x.Id).ToArray()));
     }
 
-    private IsFavoriteEntity[] CreateIsFavoriteEntityRecords()
+    private IsFavoriteEntity[] CreateIsFavoriteEntityRecords(Guid[] folderIds, Guid[] documentIds)
     {
-        var folderIds = Enumerable.Range(1, 100).ToArray();
-
         var folders = folderIds
             .Take(50)
-            .Select(x => new IsFavoriteEntity { EntityId = x, UserId = 1, EntityType = EntityType.Folder })
+            .Select(x => new IsFavoriteEntity { EntityId = x, UserId = _users[0].Id })
             .Concat(folderIds
-                .Skip(50).Select(x => new IsFavoriteEntity { EntityId = x, UserId = 2, EntityType = EntityType.Folder }));
-        
-        var documentIds = Enumerable.Range(1, 600).ToArray();
+                .Skip(50).Select(x => new IsFavoriteEntity { EntityId = x, UserId = _users[1].Id }));
+
         var documents = documentIds
             .Take(300)
-            .Select(x => new IsFavoriteEntity { EntityId = x, UserId = 1, EntityType = EntityType.Document })
+            .Select(x => new IsFavoriteEntity { EntityId = x, UserId = _users[0].Id })
             .Concat(documentIds
-                .Skip(300).Select(x => new IsFavoriteEntity { EntityId = x, UserId = 2, EntityType = EntityType.Document }));
+                .Skip(300).Take(300).Select(x => new IsFavoriteEntity { EntityId = x, UserId = _users[1].Id }));
 
         return documents.Concat(folders).ToArray();
     }
@@ -64,11 +65,11 @@ public class ApplicationContext : DbContext
     {
         new()
         {
-            Id = 1
+            Id = Guid.NewGuid()
         },
         new()
         {
-            Id = 2
+            Id = Guid.NewGuid()
         }
     };
 }

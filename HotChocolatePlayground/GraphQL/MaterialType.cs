@@ -9,5 +9,8 @@ public class MaterialType : ObjectType<Material>
         descriptor.Name("Material");
 
         descriptor.BindFieldsImplicitly();
+
+        descriptor.Field(x => x.Documents)
+            .Type<ListType<DocumentType>>();
     }
 }

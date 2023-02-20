@@ -15,11 +15,11 @@ public class Query : ObjectType
         descriptor.Field("folder")
             .Type<ListType<FolderType>>()
             .UseProjection()
-            .Resolve((context, _) =>
+            .Resolve(async (context, ct) =>
             {
-                var dbContext = context.Services.GetRequiredService<ApplicationContext>();
+                await using var dbContext = await context.Services.GetRequiredService<IDbContextFactory<ApplicationContext>>().CreateDbContextAsync(ct);
 
-                return dbContext.Set<Folder>().AsQueryable().AsSplitQuery();
+                return dbContext.Set<Folder>().AsSplitQuery();
             });
         
     }

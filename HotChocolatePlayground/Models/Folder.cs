@@ -2,7 +2,7 @@
 
 public class Folder : Entity
 {
-    public int? ParentFolderId { get; set; }
+    public Guid? ParentFolderId { get; set; }
 
     public Folder? ParentFolder { get; set; }
     

@@ -6,5 +6,5 @@ public class Material : Entity
 
     public ICollection<Document> Documents { get; set; }
 
-    public int FolderId { get; set; }
+    public Guid FolderId { get; set; }
 }
